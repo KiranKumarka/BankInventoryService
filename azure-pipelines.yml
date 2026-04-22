@@ -1,7 +1,6 @@
 # ============================================
 # BankInventoryService — CI Pipeline
 # Owner: DevOps Team
-# Last Updated: 2025
 # ============================================
 
 trigger:
@@ -42,13 +41,14 @@ stages:
         projects: '$(projectPath)'
         arguments: '--configuration $(buildConfiguration) --no-restore'
 
-    - task: DotNetCoreCLI@2
-      displayName: '🧪 Run Tests'
-      inputs:
-        command: 'test'
-        projects: '**/*Test*.csproj'
-        arguments: '--configuration $(buildConfiguration) --no-build'
-        continueOnError: true
+    # 🧪 TODO: Uncomment when Test project is added
+    # - task: DotNetCoreCLI@2
+    #   displayName: '🧪 Run Tests'
+    #   inputs:
+    #     command: 'test'
+    #     projects: '**/*Test*.csproj'
+    #     arguments: '--configuration $(buildConfiguration) --no-build'
+    #     continueOnError: true
 
     - task: DotNetCoreCLI@2
       displayName: '📤 Publish Artifact'
