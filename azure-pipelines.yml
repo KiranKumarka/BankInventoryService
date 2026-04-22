@@ -1,0 +1,66 @@
+# ============================================
+# BankInventoryService — CI Pipeline
+# Owner: DevOps Team
+# Last Updated: 2025
+# ============================================
+
+trigger:
+  branches:
+    include:
+      - develop
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+  projectPath: 'BankInventoryService/BankInventoryService.csproj'
+
+stages:
+
+- stage: Build
+  displayName: '🔨 Build & Test'
+  jobs:
+  - job: BuildJob
+    displayName: 'Build BankInventoryService'
+    steps:
+
+    - checkout: self
+      displayName: '📥 Checkout Code'
+
+    - task: DotNetCoreCLI@2
+      displayName: '📦 Restore NuGet Packages'
+      inputs:
+        command: 'restore'
+        projects: '$(projectPath)'
+
+    - task: DotNetCoreCLI@2
+      displayName: '🔨 Build Project'
+      inputs:
+        command: 'build'
+        projects: '$(projectPath)'
+        arguments: '--configuration $(buildConfiguration) --no-restore'
+
+    - task: DotNetCoreCLI@2
+      displayName: '🧪 Run Tests'
+      inputs:
+        command: 'test'
+        projects: '**/Test/*.csproj'
+        arguments: '--configuration $(buildConfiguration) --no-build'
+        continueOnError: true
+
+    - task: DotNetCoreCLI@2
+      displayName: '📤 Publish Artifact'
+      inputs:
+        command: 'publish'
+        projects: '$(projectPath)'
+        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+        publishWebProjects: false
+
+    - task: PublishBuildArtifacts@1
+      displayName: '💾 Save Build Artifact'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'BankInventoryService-drop'
+        publishLocation: 'Container'
