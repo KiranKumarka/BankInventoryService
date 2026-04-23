@@ -5,3 +5,8 @@ obj/
 *.suo
 *.userosscache
 *.sln.docstates
+
+# Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
