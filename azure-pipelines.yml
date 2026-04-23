@@ -1,21 +1,44 @@
-# ============================================
-# BankInventoryService — CI Pipeline
+# ============================================================
+# BankInventoryService — CI + CD Pipeline
 # Owner: DevOps Team
-# ============================================
+#
+# STAGES:
+#   1. 🔨 Build & Test
+#   2. 🚀 Deploy → Dev       (auto, on every push)
+#   3. 🚀 Deploy → Staging   (manual approval required)
+#   4. 🚀 Deploy → Prod      (manual approval required)
+#
+# ⚠️  NOTE: Deploy steps are commented out until Azure App
+#     Service environments are created. Search for TODO tags.
+# ============================================================
 
 trigger:
   branches:
     include:
-      - develop
-      - main
+      - develop   # triggers Dev deploy
+      - main      # triggers Dev → Staging → Prod
 
 pool:
   vmImage: 'ubuntu-latest'
 
+# ─────────────────────────────────────────────
+# 🔧 GLOBAL VARIABLES — fill these when ready
+# ─────────────────────────────────────────────
 variables:
   buildConfiguration: 'Release'
   projectPath: 'BankInventoryService/BankInventoryService.csproj'
+  artifactName: 'BankInventoryService-drop'
 
+  # TODO: Fill these when Azure App Services are created
+  azureSubscription: 'azure-bankinventory-sc'   # Azure DevOps → Project Settings → Service Connections
+  appName_Dev:     'bankinventory-dev'                # Azure App Service name (Dev)
+  appName_Staging: 'bankinventory-staging'            # Azure App Service name (Staging)
+  appName_Prod:    'bankinventory-prod'               # Azure App Service name (Prod)
+  resourceGroup:   'rg-bankinventory-dev'              # Azure Resource Group name
+
+# ============================================================
+# STAGE 1 — 🔨 BUILD & TEST
+# ============================================================
 stages:
 
 - stage: Build
@@ -62,5 +85,122 @@ stages:
       displayName: '💾 Save Build Artifact'
       inputs:
         PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-        ArtifactName: 'BankInventoryService-drop'
+        ArtifactName: '$(artifactName)'
         publishLocation: 'Container'
+
+
+# ============================================================
+# STAGE 2 — 🚀 DEPLOY → DEV
+# Runs automatically after Build succeeds.
+# Triggered by both develop and main branches.
+# ============================================================
+- stage: Deploy_Dev
+  displayName: '🚀 Deploy → Dev'
+  dependsOn: Build
+  condition: succeeded()
+  # 💡 No approval gate — auto deploy on every successful build
+
+  jobs:
+  - deployment: DeployDev
+    displayName: 'Deploy to Dev Environment'
+    environment: 'Dev'   # Create this in Azure DevOps → Pipelines → Environments
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+
+          - task: DownloadBuildArtifacts@1
+            displayName: '📥 Download Artifact'
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: '$(artifactName)'
+              downloadPath: '$(System.ArtifactsDirectory)'
+
+          # TODO: Uncomment when Dev App Service is created
+          - task: AzureWebApp@1
+            displayName: 'Deploy to Dev App Service'
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              appType: 'webApp'           # change to 'webAppLinux' if Linux
+              appName: '$(appName_Dev)'
+              package: '$(System.ArtifactsDirectory)/$(artifactName)/**/*.zip'
+              deploymentMethod: 'auto'
+# ============================================================
+# STAGE 3 — 🚀 DEPLOY → STAGING
+# Runs after Dev succeeds.
+# Requires manual approval (configure in Environments).
+# Only runs from main branch.
+# ============================================================
+- stage: Deploy_Staging
+  displayName: '🚀 Deploy → Staging'
+  dependsOn: Deploy_Dev
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  # ☝️ Staging + Prod only deploy from 'main', not from 'develop'
+
+  jobs:
+  - deployment: DeployStaging
+    displayName: 'Deploy to Staging Environment'
+    environment: 'Staging'   # ⚙️ Set approval in: Azure DevOps → Pipelines → Environments → Staging → Approvals
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+
+          - task: DownloadBuildArtifacts@1
+            displayName: '📥 Download Artifact'
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: '$(artifactName)'
+              downloadPath: '$(System.ArtifactsDirectory)'
+
+          # TODO: Uncomment when Staging App Service is created
+          - task: AzureWebApp@1
+            displayName: '🚀 Deploy to Staging App Service'
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              appType: 'webApp'
+              appName: '$(appName_Staging)'
+              package: '$(System.ArtifactsDirectory)/$(artifactName)/**/*.zip'
+              deploymentMethod: 'auto'
+
+# ============================================================
+# STAGE 4 — 🚀 DEPLOY → PROD
+# Runs after Staging succeeds.
+# Requires manual approval (configure in Environments).
+# Only runs from main branch.
+# ============================================================
+- stage: Deploy_Prod
+  displayName: '🚀 Deploy → Prod'
+  dependsOn: Deploy_Staging
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+
+  jobs:
+  - deployment: DeployProd
+    displayName: 'Deploy to Production Environment'
+    environment: 'Prod'   # ⚙️ Set approval in: Azure DevOps → Pipelines → Environments → Prod → Approvals
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+
+          - task: DownloadBuildArtifacts@1
+            displayName: '📥 Download Artifact'
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              artifactName: '$(artifactName)'
+              downloadPath: '$(System.ArtifactsDirectory)'
+
+          # TODO: Uncomment when Prod App Service is created
+          - task: AzureWebApp@1
+            displayName: '🚀 Deploy to Prod App Service'
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              appType: 'webApp'
+              appName: '$(appName_Prod)'
+              package: '$(System.ArtifactsDirectory)/$(artifactName)/**/*.zip'
+              deploymentMethod: 'auto'
+
+
