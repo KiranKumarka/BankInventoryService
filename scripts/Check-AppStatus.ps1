@@ -6,21 +6,22 @@ function Get-InventoryAppHealth {
     )
 
     Process {
-        Write-Host "🔍 Checking status for: $AppName..." -ForegroundColor Cyan
-        
         try {
-            # Check if Azure connection exists
             $app = Get-AzWebApp -Name $AppName -ErrorAction Stop
-            
-            if ($app.State -eq "Running") {
-                Write-Host "✅ [HEALTHY] $AppName is UP and running." -ForegroundColor Green
-            } else {
-                Write-Host "⚠️ [WARNING] $AppName is in $($app.State) state." -ForegroundColor Yellow
-            }
+            Write-Host "✅ $AppName is $($app.State)" -ForegroundColor Green
         }
         catch {
-            Write-Host "❌ [ERROR] Could not find or access App: $AppName. Check your login/permissions." -ForegroundColor Red
-            Write-Host "Details: $($_.Exception.Message)" -ForegroundColor Gray
+            Write-Host "❌ Error: $($_.Exception.Message)" -ForegroundColor Red
         }
+
+        "$AppName status was checked at $(Get-Date)" | Out-File -FilePath ".\Scripts\log.txt" -Append
     }
+}
+
+# Clean up script after deployment
+
+function Clear-AppTemp {
+    Write-Host "🧹 Cleaning Temp files for Deployment..." -ForegroundColor Yellow
+    Remove-Item -Path ".\bin\*", ".\obj\*" -Recurse -ErrorAction SilentlyContinue
+    Write-Host "✅ Cleanup Done!" -ForegroundColor Green
 }
