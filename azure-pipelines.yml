@@ -58,7 +58,7 @@ stages:
         targetType: 'inline'
         script: |
           # Script file ko load karo
-          . $(System.DefaultWorkingDirectory)/Scripts/Check-AppStatus.ps1
+          . $(System.DefaultWorkingDirectory)/scripts/Check-AppStatus.ps1
           
           # Cleanup function ko call karo
           Clear-AppTemp -Path $(System.DefaultWorkingDirectory)
