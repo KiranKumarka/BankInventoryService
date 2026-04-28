@@ -50,6 +50,22 @@ stages:
 
     - checkout: self
       displayName: '📥 Checkout Code'
+      
+      # --- YE WALA TASK ADD KARO ---
+    - task: PowerShell@2
+      displayName: '🧹 DevOps Cleanup & Health Check'
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Script file ko load karo
+          . $(System.DefaultWorkingDirectory)/Scripts/Check-AppStatus.ps1
+          
+          # Cleanup function ko call karo
+          Clear-AppTemp -Path $(System.DefaultWorkingDirectory)
+          
+          Write-Host "Pre-build checks completed successfully!"
+        pwsh: true
+    # -----------------------------
 
     - task: DotNetCoreCLI@2
       displayName: '📦 Restore NuGet Packages'
